@@ -1,8 +1,10 @@
 import { Button } from '@alfalab/core-components/button/cssm';
 import { PureCell } from '@alfalab/core-components/pure-cell/cssm';
 import { Typography } from '@alfalab/core-components/typography/cssm';
-
 import { useEffect, useState } from 'react';
+import percent27Img from './assets/27_percent.png';
+import percent73Img from './assets/73_percent.png';
+import hbImg from './assets/hb.png';
 import { useStocksData } from './hooks/useStocksData';
 import { LS, LSKeys } from './ls';
 import { appSt } from './style.css';
@@ -11,6 +13,7 @@ type PredictionOption = 'yes' | 'no';
 
 export const App = () => {
   const [selectedOption, setSelectedOption] = useState<PredictionOption | null>(null);
+  const [pressedOption, setPressedOption] = useState<PredictionOption | null>(null);
   const { stocks } = useStocksData();
 
   useEffect(() => {
@@ -20,13 +23,48 @@ export const App = () => {
   }, []);
 
   useEffect(() => {
+    if (selectedOption) {
+      document.body.style.background = '#FFFFFF';
+    }
+  }, [selectedOption]);
+
+  useEffect(() => {
     if (stocks?.question) {
-      window.gtag('event', '7287_question_impression', { var: 'var2', question: stocks.id });
+      window.gtag('event', '7287_question_impression', { var: 'var3', question: stocks.id });
     }
   }, [stocks]);
 
-  const getAnswerButtonClassName = (option: PredictionOption) =>
-    option === selectedOption ? `${appSt.answerButton} ${appSt.answerButtonSelected}` : appSt.answerButton;
+  const showAnswerStats = pressedOption !== null;
+
+  const getAnswerButtonClassName = (option: PredictionOption) => {
+    const classNames = [appSt.answerButton, option === pressedOption ? appSt.answerButtonYes : appSt.answerButtonNo];
+
+    if (!showAnswerStats) {
+      return classNames.join(' ');
+    }
+
+    classNames.push(appSt.answerButtonStats);
+
+    if (option === pressedOption) {
+      classNames.push(appSt.answerButtonSelected);
+    } else {
+      classNames.push(appSt.answerButtonUnselected);
+    }
+
+    return classNames.join(' ');
+  };
+
+  const getPercentByOption = (option: PredictionOption) => (option === pressedOption ? '73%' : '27%');
+  const getPercentImageByOption = (option: PredictionOption) => (option === pressedOption ? percent73Img : percent27Img);
+
+  const handleAnswerClick = (option: PredictionOption) => {
+    if (pressedOption) {
+      return;
+    }
+
+    window.gtag('event', '7287_answer_click', { var: 'var3', answer: option, question: stocks?.id ?? '' });
+    setPressedOption(option);
+  };
 
   if (selectedOption === 'no') {
     return (
@@ -50,7 +88,7 @@ export const App = () => {
             <PureCell
               onClick={() => {
                 window.gtag('event', '7287_choose_security', {
-                  var: 'var2',
+                  var: 'var3',
                   security_ticker: stock.ticker,
                   answer: 'no',
                   question: stocks?.id ?? '',
@@ -107,7 +145,7 @@ export const App = () => {
             <PureCell
               onClick={() => {
                 window.gtag('event', '7287_choose_security', {
-                  var: 'var2',
+                  var: 'var3',
                   security_ticker: stock.ticker,
                   answer: 'yes',
                   question: stocks?.id ?? '',
@@ -144,87 +182,75 @@ export const App = () => {
   }
 
   return (
-    <div className={appSt.page}>
-      <div className={appSt.phoneFrame}>
-        <div className={appSt.hero}>
-          <div className={appSt.heroContent}>
-            <span className={appSt.analyticsBadge}>АНАЛИТИКА</span>
+    <>
+      <div className={appSt.container}>
+        <section className={appSt.questionCard}>
+          <img src={hbImg} alt="HB" width={206} height={165} className={appSt.questionImg} />
+          <Typography.Text
+            tag="div"
+            view="primary-medium"
+            style={{
+              color: 'rgba(3, 3, 6, 0.88)',
+              fontSize: '22px',
+              lineHeight: '26px',
+              fontWeight: 700,
+            }}
+          >
+            {stocks?.question}
+          </Typography.Text>
 
-            <Typography.TitleResponsive
-              tag="h1"
-              view="medium"
-              font="system"
-              weight="semibold"
-              color="primary-inverted"
-              style={{
-                margin: '12px 0 8px',
-              }}
+          <div className={appSt.answerButtons}>
+            <button
+              type="button"
+              className={getAnswerButtonClassName('yes')}
+              onClick={() => handleAnswerClick('yes')}
+              disabled={showAnswerStats}
             >
-              Ваш прогноз
-              <br />
-              на развитие события
-            </Typography.TitleResponsive>
-
-            <Typography.Text tag="p" view="primary-medium" defaultMargins={false} color="primary-inverted">
-              Покажем активы под выбранный вариант
-            </Typography.Text>
-          </div>
-        </div>
-
-        <div className={appSt.content}>
-          <section className={appSt.questionCard}>
-            <Typography.Text
-              tag="div"
-              view="primary-medium"
-              style={{
-                color: 'rgba(3, 3, 6, 0.88)',
-                fontSize: '22px',
-                lineHeight: '26px',
-                fontWeight: 700,
-              }}
-            >
-              {stocks?.question}
-            </Typography.Text>
-
-            <div>
-              <div className={appSt.answerRow}>
-                <Button
-                  block
-                  view="secondary"
-                  className={getAnswerButtonClassName('yes')}
-                  onClick={() => {
-                    window.gtag('event', '7287_answer_click', { var: 'var2', answer: 'yes', question: stocks?.id ?? '' });
-                    setSelectedOption('yes');
-                  }}
-                >
+              <span className={`${appSt.answerButtonContent} ${showAnswerStats ? appSt.answerButtonContentStats : ''}`}>
+                {showAnswerStats && <span className={appSt.answerButtonPercent}>{getPercentByOption('yes')}</span>}
+                <span className={`${appSt.answerButtonLabel} ${showAnswerStats ? appSt.answerButtonLabelStats : ''}`}>
                   Да
-                </Button>
+                </span>
+                {showAnswerStats && <img src={getPercentImageByOption('yes')} alt="" className={appSt.answerButtonImage} />}
+              </span>
+            </button>
 
-                <Button
-                  block
-                  view="secondary"
-                  className={getAnswerButtonClassName('no')}
-                  onClick={() => {
-                    window.gtag('event', '7287_answer_click', { var: 'var2', answer: 'no', question: stocks?.id ?? '' });
-                    setSelectedOption('no');
-                  }}
-                >
+            <button
+              type="button"
+              className={getAnswerButtonClassName('no')}
+              onClick={() => handleAnswerClick('no')}
+              disabled={showAnswerStats}
+            >
+              <span className={`${appSt.answerButtonContent} ${showAnswerStats ? appSt.answerButtonContentStats : ''}`}>
+                {showAnswerStats && <span className={appSt.answerButtonPercent}>{getPercentByOption('no')}</span>}
+                <span className={`${appSt.answerButtonLabel} ${showAnswerStats ? appSt.answerButtonLabelStats : ''}`}>
                   Нет
-                </Button>
-              </div>
-              <Typography.Text
-                tag="p"
-                view="primary-small"
-                defaultMargins={false}
-                className={appSt.questionHint}
-                color="secondary"
-              >
-                Выбор влияет на подбор активов ниже
-              </Typography.Text>
-            </div>
-          </section>
-        </div>
+                </span>
+                {showAnswerStats && <img src={getPercentImageByOption('no')} alt="" className={appSt.answerButtonImage} />}
+              </span>
+            </button>
+          </div>
+        </section>
       </div>
-    </div>
+
+      {pressedOption && (
+        <div className={appSt.bottomBtn}>
+          <Button
+            block
+            view="primary"
+            onClick={() => {
+              window.gtag('event', '7287_selection_open', {
+                var: 'var3',
+                question: stocks?.id ?? '',
+                answer: pressedOption ?? '',
+              });
+              setSelectedOption(pressedOption);
+            }}
+          >
+            Посмотреть подборку
+          </Button>
+        </div>
+      )}
+    </>
   );
 };
